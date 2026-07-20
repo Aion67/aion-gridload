@@ -33,4 +33,4 @@ This repository follows the workflow plan in `docs/workflow.md`.
 
 - `docs/workflow.md` for the team workflow and folder structure.
 - `docs/grid-load-summary.md` for the project tasks and deliverables.
-- `docs/group_D.md` for the cleaned Group D member roster.
+- `docs/group_D.md` for the Group D member roster.
