@@ -108,23 +108,65 @@ tree singletons trail.
 | Baseline (mean) | 102.35 ± 3.75 |
 
 **Selected: GradientBoostingRegressor** — best CV mean, low variance, and captures the
-interaction structure. Refit on all data and saved to `best_model/`.
+interaction structure. This model is then diagnosed and tuned (below) before being saved.
+
+### 5a. Overfitting diagnostics (`diagnostics_01_overfitting.ipynb`)
+Rather than trusting a single test score, we inspected training behaviour:
+
+- **Train vs test gap:** RandomForest is near-perfect on train (RMSE 6.9) but 18.9 on test —
+  a gap of 12 MW = **clear overfitting**. GradientBoosting's gap is 4.5; Ridge's is ~0.2.
+  RF was therefore dropped. (`diag_train_test_gap.png`)
+- **Learning curve** (`diag_learning_curve.png`): train and CV curves converge → the dataset is
+  already large enough; collecting more rows would help little. This is why *augmentation*, not
+  more data, was the next lever tried.
+- **Validation curves** (`diag_validation_curves.png`): CV error stops improving at shallow depth
+  and moderate `n_estimators` — these ranges fed the tuning grid.
+- **Residuals** (`diag_residuals.png`): centred on zero and roughly patternless; error is fairly
+  uniform across regions and hours (`diag_error_breakdown.png`).
+
+### 5b. Hyperparameter tuning (`tuning_01_gradient_boosting.ipynb`)
+A 108-config `GridSearchCV` over learning rate, depth, estimators, subsample and
+`min_samples_leaf` found `lr=0.1, max_depth=2, n_estimators=400, subsample=0.8,
+min_samples_leaf=5`. This **improved CV RMSE 12.67 → 10.40** and simultaneously **reduced the
+overfitting gap 4.5 → 3.0** (shallow trees + stochastic subsampling regularise). It beat the
+saved model on the held-out test and became the new `best_model/`.
+
+### 5c. Data augmentation (`augmentation_01_noise_injection.ipynb`)
+Tested Gaussian jitter (noise sweep), bootstrap resampling and a log-target transform. Best
+jitter (σ=0.02) reached 12.74 vs 12.86 baseline — negligible; bootstrap was worse; log-target
+gave a tiny gain. **Conclusion: augmentation adds little here**, consistent with the converged
+learning curve. Tuning, not augmentation, drove the improvement.
+
+### 5d. Feature scaling / standardization (`scaling_01_effect.ipynb`)
+Tested 4 scalers (none, Standard, MinMax, Robust) × 7 models by CV RMSE (`scaling_heatmap.png`,
+`scaling_sensitivity.png`). **SVR** is highly scale-sensitive (RMSE ~32 → ~20 when scaled); **KNN**
+is sensitive but weak overall; **linear** models barely move; **tree ensembles (RF, GBM) are flat
+across all scalers**. Since the final model is GradientBoosting, **no scaling is applied** — it
+would add complexity for zero benefit. (Scaling would only matter if an SVR/KNN/linear model were
+chosen.)
+
+### 5e. Consolidated final model (`best_model/final_best_model.ipynb`)
+One notebook combines every winning choice — range+median cleaning, the full engineered feature
+set, the tuned GradientBoosting config, no scaling, no augmentation — as a single raw→prediction
+pipeline, evaluated with visuals (`final_actual_vs_pred.png`, `final_feature_importance.png`,
+`final_pred_vs_actual_line.png`) and saved as the shipped model.
 
 ---
 
 ## 6. Evaluation results
 
-Held-out test performance of the final model:
+Held-out test performance of the final **tuned** model:
 
-| Metric | Value |
-| --- | --- |
-| RMSE | **12.86 MW** |
-| MAE | 10.23 MW |
-| R² | **0.984** |
-| MAPE | **1.71 %** |
+| Metric | Default GBM | **Tuned GBM (final)** |
+| --- | --- | --- |
+| RMSE | 12.86 MW | **10.13 MW** |
+| MAE | 10.23 MW | **8.32 MW** |
+| R² | 0.984 | **0.990** |
+| MAPE | 1.71 % | **1.40 %** |
 
-The model explains ~98% of load variance with average error under 2%. `actual_vs_predicted.png`
-shows points tight to the diagonal.
+The tuned model explains ~99% of load variance with average error ~1.4%, while carrying a
+smaller train-test gap than the default. `actual_vs_predicted.png` shows points tight to the
+diagonal.
 
 **Explainability** (`explainability_01_importance.ipynb`, `feature_importance.png`):
 `Pop_x_Industrial` dominates (~0.90 impurity importance), followed by `IndustrialIndex`,
@@ -140,8 +182,9 @@ the strongest load driver.
   validation and median imputation; only one row was unusable.
 - Feature engineering — especially the **population × industrial interaction** — was the single
   biggest accuracy lever.
-- GradientBoosting predicts grid load with **R² 0.984 / MAPE 1.71%**, accurate enough for
-  planning support.
+- After overfitting diagnostics and grid-search tuning, GradientBoosting predicts grid load with
+  **R² 0.990 / MAPE 1.40%**, accurate enough for planning support. RandomForest was rejected for
+  overfitting; augmentation gave no meaningful gain on this already-sufficient dataset.
 
 **Actionable insights & recommendations**
 1. **Protect the top drivers:** accuracy hinges on population and industrial indices — invest in
@@ -149,8 +192,9 @@ the strongest load driver.
 2. **Plan around evening peaks and the Central region**, which the model flags as high-load.
 3. **Add validation at data entry** to reject impossible values (negative humidity, Hour>23) at
    the source rather than cleaning them later.
-4. **Next steps:** hyperparameter tuning of GradientBoosting, and — if a true timestamp becomes
-   available — lag/rolling features for genuine forecasting.
+4. **Next steps:** if a true timestamp becomes available, add lag/rolling features for genuine
+   forecasting; otherwise explore additional interaction terms and gradient-boosting libraries
+   (XGBoost/LightGBM) for marginal gains.
 
 ---
 

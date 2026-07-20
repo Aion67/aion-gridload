@@ -22,7 +22,7 @@ This repository follows the workflow plan in `docs/workflow.md`.
 
 ## Results
 
-Final model: **GradientBoostingRegressor** — test **RMSE 12.86 MW, R² 0.984, MAPE 1.71%**.
+Final model: **GradientBoostingRegressor (tuned)** — test **RMSE 10.13 MW, R² 0.990, MAPE 1.40%**.
 Top load driver: the population × industrial interaction. Full write-up in
 [reports/final_report.md](reports/final_report.md); every experiment in
 [experiment_log.md](experiment_log.md).
@@ -39,7 +39,12 @@ Run notebooks in order (each is already executed with outputs saved):
 1. `notebooks/00_data_understanding.ipynb` — missing values & data quality (Tasks 1–3)
 2. `notebooks/01_eda.ipynb` — visualizations, writes `data/processed/grid_load_clean.csv` (Tasks 7–9)
 3. `notebooks/02_baseline_models.ipynb` — model screening (Task 10)
-4. `notebooks/experiments/` — imputation, feature engineering, CV selection, explainability (Tasks 2–6, 11)
+4. `notebooks/experiments/` — imputation, feature engineering, CV selection, explainability (Tasks 2–6, 11),
+   plus deeper exploration: `diagnostics_01_overfitting` (learning/validation curves, residuals),
+   `tuning_01_gradient_boosting` (grid search), `augmentation_01_noise_injection` (jitter/bootstrap/log-target),
+   `scaling_01_effect` (scalers × models)
+5. `best_model/final_best_model.ipynb` — consolidated raw→prediction pipeline using every winning
+   choice, with visuals; produces the shipped model.
 
 ```bash
 jupyter nbconvert --to notebook --execute --inplace notebooks/00_data_understanding.ipynb
