@@ -1,0 +1,14 @@
+feature
+Hour
+DayOfWeek
+Temperature_C
+Humidity_pct
+Rainfall_mm
+PopulationIndex
+IndustrialIndex
+SolarGenerationIndex
+Morning_Peak
+Evening_Peak
+Is_Weekend
+Is_Working_Day
+Region_Encoded
