@@ -1,0 +1,7 @@
+,cv_rmse_mean,cv_rmse_std,cv_r2_mean
+GradientBoosting,15.996,3.241,0.975
+LinearRegression,18.524,3.144,0.966
+Ridge,18.524,3.143,0.966
+RandomForest,23.098,2.799,0.948
+DecisionTree,35.09,1.898,0.882
+Baseline (mean),102.516,2.638,-0.001
